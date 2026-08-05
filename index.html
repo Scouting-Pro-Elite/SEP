@@ -83,8 +83,14 @@
        bien centrado con margin:auto) terminaba encogido y pegado a la izquierda del
        sidebar, con un enorme espacio vacío a la derecha en monitores anchos. Separar las
        reglas y fijar width:100% en <body> resuelve el corrimiento de forma definitiva. */
-    html { height: 100vh; height: 100dvh; overflow: hidden; }
-    body { background: var(--bg-app); color: var(--text-main); height: 100vh; height: 100dvh; overflow: hidden; display: flex; width: 100%; }
+    /* COMPATIBILIDAD iOS/visualViewport: --app-100vh la fija JS (ver
+       initVisualViewportSupport) con el alto REAL visible (visualViewport.height),
+       que en iOS se reduce cuando el teclado virtual está abierto. Se declara
+       DESPUÉS de 100vh/100dvh para que sea solo una mejora progresiva: mientras
+       JS no la haya definido (o en navegadores sin visualViewport, donde JS la
+       fija igual a innerHeight) el comportamiento es idéntico al actual. */
+    html { height: 100vh; height: 100dvh; height: var(--app-100vh, 100dvh); overflow: hidden; }
+    body { background: var(--bg-app); color: var(--text-main); height: 100vh; height: 100dvh; height: var(--app-100vh, 100dvh); overflow: hidden; display: flex; width: 100%; }
 
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg-app); }
@@ -115,7 +121,7 @@
     .card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
 
     /* Sidebar */
-    #sidebar { width: 260px; background: var(--bg-panel); height: 100vh; height: 100dvh; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; left: -260px; z-index: 100; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    #sidebar { width: 260px; background: var(--bg-panel); height: 100vh; height: 100dvh; height: var(--app-100vh, 100dvh); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; left: -260px; z-index: 100; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     #sidebar.open { left: 0; }
     .sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border); font-size: 1rem; font-weight: 700; color: white; display: flex; align-items: center; justify-content: space-between; white-space: nowrap; }
     .nav-item { padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; color: var(--text-muted); cursor: pointer; transition: 0.2s; text-decoration: none; border-left: 3px solid transparent; min-height: 44px; }
@@ -128,9 +134,9 @@
     .nav-submenu.open { max-height: 220px; }
     .nav-subitem { padding-left: 2.6rem; font-size: 0.92rem; min-height: 40px; }
 
-    #overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 99; display: none; backdrop-filter: blur(2px); }
+    #overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: var(--app-100vh, 100vh); background: rgba(0,0,0,0.5); z-index: 99; display: none; backdrop-filter: blur(2px); }
 
-    #main-content { flex: 1; height: 100vh; height: 100dvh; display: flex; flex-direction: column; transition: 0.3s; width: 100%; position: relative; min-width: 0; }
+    #main-content { flex: 1; height: 100vh; height: 100dvh; height: var(--app-100vh, 100dvh); display: flex; flex-direction: column; transition: 0.3s; width: 100%; position: relative; min-width: 0; }
 
     .topbar { height: 64px; min-height: 64px; background: var(--bg-app); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; gap: 1rem; }
     .hamburger { font-size: 1.5rem; cursor: pointer; color: var(--text-muted); transition: 0.2s; padding: 0.5rem; }
@@ -439,7 +445,7 @@
     @media (pointer: coarse) { .tutorial-card-actions .btn { padding:0.55rem 0.85rem; } }
 
     /* Modal */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 1rem; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: var(--app-100vh, 100vh); background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 1rem; padding-bottom: calc(1rem + var(--app-kb-inset, 0px)); }
     /* Modo solo lectura para pizarras importadas como "Solo visualización":
        bloquea visualmente los controles de edición sin tocar la pizarra en sí. */
     .board-readonly .board-toolbar,
@@ -455,7 +461,7 @@
     .board-readonly .board-readonly-badge { display:inline-block; }
     .share-perm-btn { flex:1; min-width:120px; }
     #share-board-link, #share-board-code { width:100%; font-family:monospace; font-size:0.72rem; resize:vertical; }
-    .modal-content { background: var(--bg-panel); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border); width: 400px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
+    .modal-content { background: var(--bg-panel); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border); width: 400px; max-width: 100%; max-height: 90vh; max-height: calc(var(--app-100vh, 100vh) * 0.9 - var(--app-kb-inset, 0px)); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
     /* Botón de ayuda (topbar) */
     .help-btn { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
@@ -594,7 +600,7 @@
     .heat-label { position: absolute; transform: translate(-50%, -50%); pointer-events: none; font-size: 10px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.95); white-space: nowrap; z-index: 6; max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
 
     /* ===== LOGIN DE PERFILES LOCALES ===== */
-    #login-screen { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; background: var(--bg-app); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1.5rem; overflow-y: auto; }
+    #login-screen { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; height: var(--app-100vh, 100dvh); background: var(--bg-app); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1.5rem; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     #login-screen.hidden { display: none; }
     .login-box { width: 100%; max-width: 380px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 1.75rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .login-logo { font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 0.4rem; }
@@ -2559,6 +2565,70 @@
     let pendingHeatGroupPlayer = null; // nombre del jugador cuyo grupo está abierto en el modal
     let currentPlayerHeatView = 'full'; // vista de cancha activa dentro del mapa de calor de Análisis de Jugador
     let pendingPlayerHeatGroupTag = null; // partido/rival cuyo grupo está abierto en el modal (mapa del jugador)
+
+    // ==========================================================================
+    // === COMPATIBILIDAD MÓVIL: window.visualViewport =========================
+    // ==========================================================================
+    // Objetivo: que el teclado virtual (iOS/Android) no tape inputs, que los
+    // paneles/formularios (modales, sidebar) se ajusten al alto REAL visible, y
+    // que la pizarra táctica / canvases no queden desalineados cuando el teclado
+    // abre o cierra. 100vh/100dvh no resuelven esto de forma confiable en iOS
+    // Safari (sobre todo con inputs enfocados dentro de modales), así que se usa
+    // la API visualViewport cuando existe, con fallback a window.innerHeight en
+    // navegadores que no la soportan (no rompe nada en Android/escritorio: en
+    // esos casos visualViewport.height ya coincide con innerHeight).
+    (function initVisualViewportSupport() {
+        const vv = window.visualViewport;
+        let vvRaf = null;
+
+        // Actualiza variables CSS con el alto/ancho VISIBLE real y con el
+        // espacio que ocupa el teclado (--app-kb-inset), para que el CSS pueda
+        // usarlas en vez de 100vh/100dvh donde haga falta (ver reglas
+        // html/body/#sidebar/#main-content/.modal más abajo en el <style>).
+        function applyViewportVars() {
+            const h = vv ? vv.height : window.innerHeight;
+            const w = vv ? vv.width : window.innerWidth;
+            const offsetTop = vv ? vv.offsetTop : 0;
+            const kbInset = vv ? Math.max(0, window.innerHeight - vv.height - offsetTop) : 0;
+            const root = document.documentElement.style;
+            root.setProperty('--app-100vh', h + 'px');
+            root.setProperty('--app-100vw', w + 'px');
+            root.setProperty('--app-kb-inset', kbInset + 'px');
+            root.setProperty('--app-vv-offset-top', offsetTop + 'px');
+            // Reajusta la pizarra táctica y demás canvases (mapa de calor, mapa
+            // de acciones): al abrir/cerrar el teclado en iOS el layout puede
+            // cambiar de tamaño sin disparar el "resize" clásico de window.
+            if (typeof resizeAllPitchCanvases === 'function') resizeAllPitchCanvases();
+        }
+
+        function scheduleViewportUpdate() {
+            if (vvRaf) cancelAnimationFrame(vvRaf);
+            vvRaf = requestAnimationFrame(applyViewportVars);
+        }
+
+        applyViewportVars();
+        if (vv) {
+            vv.addEventListener('resize', scheduleViewportUpdate);
+            vv.addEventListener('scroll', scheduleViewportUpdate);
+        } else {
+            window.addEventListener('resize', scheduleViewportUpdate);
+        }
+        window.addEventListener('orientationchange', () => setTimeout(applyViewportVars, 150));
+
+        // Al enfocar un input/textarea/select (formularios, modales, etc.), se
+        // espera a que el teclado termine de animar su apertura y se centra el
+        // campo en el área REALMENTE visible, para que no quede tapado.
+        document.addEventListener('focusin', (e) => {
+            const el = e.target;
+            if (!el || typeof el.matches !== 'function') return;
+            if (!el.matches('input, textarea, select')) return;
+            const skipTypes = ['checkbox', 'radio', 'range', 'button', 'submit', 'file', 'color'];
+            if (skipTypes.includes((el.type || '').toLowerCase())) return;
+            setTimeout(() => {
+                try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err) {}
+            }, 300);
+        });
+    })();
 
     // ==========================================================================
     // === MOTOR ÚNICO DE PIZARRA (PitchEngine) ================================
@@ -9102,6 +9172,10 @@
         }
         e.preventDefault();
         isDrawing = true;
+        // Captura el puntero para que pointermove/pointerup sigan llegando al canvas
+        // aunque el dedo/mouse salga de su área durante el trazo (evita que el dibujo
+        // quede a medias o que isDrawing se quede "pegado" en true).
+        try { canvas.setPointerCapture(e.pointerId); } catch(err) {}
         const rect = canvas.getBoundingClientRect();
         startX = e.clientX - rect.left;
         startY = e.clientY - rect.top;
@@ -9234,6 +9308,11 @@
     }
 
     function stopDrawing(e) {
+        // Libera la captura del puntero (si la hubiera) apenas termina el gesto,
+        // tanto si se soltó dentro del canvas como fuera de él.
+        if(e && e.pointerId !== undefined) {
+            try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
+        }
         if(draggingLine) {
             draggingLine = null;
             draggingLineOrig = null;
@@ -12505,7 +12584,14 @@
 
 
     // === INICIALIZACIÓN ===
-    window.onload = () => {
+    // Optimización de arranque: se usa DOMContentLoaded en vez de window.onload.
+    // Ninguna de estas 4 funciones necesita esperar a que terminen de cargar
+    // recursos externos (Google Fonts, Font Awesome, Chart.js, html2canvas):
+    // solo tocan el DOM ya parseado (los elementos que usan están antes en el
+    // HTML), localStorage y el objeto interno PitchView. Con window.onload la
+    // interfaz esperaba innecesariamente a esas fuentes/librerías por CDN antes
+    // de mostrar perfiles guardados y quedar interactiva.
+    document.addEventListener('DOMContentLoaded', () => {
         renderLoginProfiles();
         try {
             const lastName = localStorage.getItem('scoutpro_elite_last_username');
@@ -12513,7 +12599,7 @@
         } catch(err) {}
         updatePitchOrientationButton();
         checkForSharedBoardInUrl();
-    };
+    });
 </script>
 
 <!-- === PWA: Registro del Service Worker === -->
@@ -12549,5 +12635,5 @@
     }
 </script>
 
-<script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-repl-id="2e088c67-58f5-4a59-89a8-2e3db843f21d"></script></body>
+</body>
 </html>

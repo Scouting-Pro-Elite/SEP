@@ -15,7 +15,7 @@
  * ---------------------------------------------------------------
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const APP_SHELL_CACHE = `scoutpro-elite-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `scoutpro-elite-runtime-${CACHE_VERSION}`;
 
@@ -143,7 +143,15 @@ async function staleWhileRevalidate(request) {
     const cache = await caches.open(RUNTIME_CACHE);
     const cached = await cache.match(request);
 
-    const networkFetch = fetch(request, { mode: request.mode === 'navigate' ? 'same-origin' : 'no-cors' })
+    // Antes se forzaba mode:'no-cors' aqui, lo que convierte la respuesta
+    // en "opaca" (sin status ni body legible). Para la mayoria de recursos
+    // (CSS, JS) eso no rompe nada, pero para los archivos de fuente de
+    // Font Awesome (.woff2) una respuesta opaca cacheada puede terminar
+    // sirviendose invalida, y entonces el navegador no puede pintar el
+    // glifo del icono y muestra un cuadrado vacio en su lugar.
+    // Usamos el modo original de la solicitud (normalmente 'cors') para
+    // quedarnos con una respuesta real que sepamos que es valida.
+    const networkFetch = fetch(request)
         .then((res) => {
             if (res && (res.ok || res.type === 'opaque')) {
                 cache.put(request, res.clone());
