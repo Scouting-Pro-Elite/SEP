@@ -77,6 +77,13 @@ self.addEventListener('fetch', (event) => {
     if (request.method !== 'GET') return;
 
     const url = new URL(request.url);
+
+    // Ignora esquemas que la Cache API no soporta (chrome-extension:, etc.).
+    // Algunas extensiones del navegador disparan peticiones que este SW
+    // llega a interceptar; intentar cache.put() sobre ellas lanzaba
+    // "Failed to execute 'put' on 'Cache': Request scheme ... is unsupported".
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
     const isSameOrigin = url.origin === self.location.origin;
 
     // 1) Navegacion (el usuario abre o recarga la app): network-first

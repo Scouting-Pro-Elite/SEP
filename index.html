@@ -2577,6 +2577,14 @@
     // la API visualViewport cuando existe, con fallback a window.innerHeight en
     // navegadores que no la soportan (no rompe nada en Android/escritorio: en
     // esos casos visualViewport.height ya coincide con innerHeight).
+    // canvas/ctx de la pizarra táctica: declarados aquí (antes de
+    // initVisualViewportSupport) porque resizeAllPitchCanvases() -llamada por esa
+    // IIFE nada más cargar la página- los referencia, y con "let" declarado más abajo
+    // se producía "Cannot access 'canvas' before initialization" (TDZ) en el primer
+    // resize/orientationchange, lo que rompía todo el script y dejaba la pantalla de
+    // login congelada.
+    let ctx, canvas;
+
     (function initVisualViewportSupport() {
         const vv = window.visualViewport;
         let vvRaf = null;
@@ -7557,7 +7565,6 @@
     let canvasMode = 'drag';
     let isDrawing = false;
     let startX, startY;
-    let ctx, canvas;
     let activeToken = null;
     let activeBoard = null;
 
