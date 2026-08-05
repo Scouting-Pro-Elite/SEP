@@ -2577,15 +2577,34 @@
     // la API visualViewport cuando existe, con fallback a window.innerHeight en
     // navegadores que no la soportan (no rompe nada en Android/escritorio: en
     // esos casos visualViewport.height ya coincide con innerHeight).
-    // canvas/ctx (pizarra táctica) y heatCtx/heatCanvas (mapa de calor): declarados
+    // canvas/ctx (pizarra táctica), heatCtx/heatCanvas (mapa de calor) y
+    // activePlayerMapScope/PLAYER_MAP_DOM (mapa de acciones del jugador): declarados
     // aquí (antes de initVisualViewportSupport) porque resizeAllPitchCanvases() -
-    // llamada por esa IIFE nada más cargar la página- los referencia, y con "let"
-    // declarado más abajo se producía "Cannot access '...' before initialization"
-    // (TDZ) en el primer resize/orientationchange, lo que rompía todo el script y
-    // dejaba la pantalla de login congelada (y por eso "Entrar" no hacía nada:
-    // currentProfileId tampoco llegaba a declararse).
+    // llamada por esa IIFE nada más cargar la página- los referencia (directamente o
+    // a través de pmDom()), y con "let"/"const" declarados más abajo se producía
+    // "Cannot access '...' before initialization" (TDZ) en el primer resize/
+    // orientationchange, lo que rompía todo el script y dejaba la pantalla de login
+    // congelada (y por eso "Entrar" no hacía nada: currentProfileId tampoco llegaba
+    // a declararse). Si en el futuro se agrega OTRA variable module-level que
+    // resizeAllPitchCanvases (o algo que ella llame) necesite, debe declararse acá
+    // también, no donde "quede mejor" más abajo en el archivo.
     let ctx, canvas;
     let heatCtx, heatCanvas;
+    let activePlayerMapScope = 'player'; // 'player' (Perfil de Jugador) | 'matchplayer' (Informe dentro de un partido)
+    const PLAYER_MAP_DOM = {
+        player: {
+            canvas: 'player-actionmap-canvas', pitch: 'player-actionmap-pitch', pitchVisual: 'player-actionmap-pitch-visual',
+            labels: 'player-actionmap-labels-layer', viewSelect: 'player-actionmap-view-select', chips: 'player-action-type-chips',
+            summary: 'player-action-summary', tacticalList: 'player-tactical-profile-list', tacticalEmpty: 'player-tactical-profile-empty',
+            pathBtn: 'btn-player-path-mode'
+        },
+        matchplayer: {
+            canvas: 'mp-actionmap-canvas', pitch: 'mp-actionmap-pitch', pitchVisual: 'mp-actionmap-pitch-visual',
+            labels: 'mp-actionmap-labels-layer', viewSelect: 'mp-actionmap-view-select', chips: 'mp-action-type-chips',
+            summary: 'mp-action-summary', tacticalList: 'mp-tactical-profile-list', tacticalEmpty: 'mp-tactical-profile-empty',
+            pathBtn: 'btn-mp-path-mode'
+        }
+    };
 
     (function initVisualViewportSupport() {
         const vv = window.visualViewport;
@@ -11403,7 +11422,8 @@
     // El motor de mapa de acciones/recorridos/perfil táctico es UNA sola lógica. Lo único
     // que cambia según dónde se abre es DE DÓNDE lee/escribe los datos y a QUÉ elementos del
     // DOM dibuja. Eso se resuelve acá, sin duplicar ninguna función de cálculo o dibujo.
-    let activePlayerMapScope = 'player'; // 'player' (Perfil de Jugador) | 'matchplayer' (Informe dentro de un partido)
+    // (activePlayerMapScope y PLAYER_MAP_DOM se declaran más arriba en el archivo,
+    // junto a canvas/heatCanvas, porque pmDom() los necesita desde la carga inicial)
     let currentMatchPlayerCtx = null; // { matchId, entryId } cuando activePlayerMapScope === 'matchplayer'
 
     // Devuelve el objeto donde viven actionMap/movementPaths de este contexto: el informe
@@ -11419,21 +11439,8 @@
         return db.players.find(p => p.id === currentEditingId);
     }
 
-    const PLAYER_MAP_DOM = {
-        player: {
-            canvas: 'player-actionmap-canvas', pitch: 'player-actionmap-pitch', pitchVisual: 'player-actionmap-pitch-visual',
-            labels: 'player-actionmap-labels-layer', viewSelect: 'player-actionmap-view-select', chips: 'player-action-type-chips',
-            summary: 'player-action-summary', tacticalList: 'player-tactical-profile-list', tacticalEmpty: 'player-tactical-profile-empty',
-            pathBtn: 'btn-player-path-mode'
-        },
-        matchplayer: {
-            canvas: 'mp-actionmap-canvas', pitch: 'mp-actionmap-pitch', pitchVisual: 'mp-actionmap-pitch-visual',
-            labels: 'mp-actionmap-labels-layer', viewSelect: 'mp-actionmap-view-select', chips: 'mp-action-type-chips',
-            summary: 'mp-action-summary', tacticalList: 'mp-tactical-profile-list', tacticalEmpty: 'mp-tactical-profile-empty',
-            pathBtn: 'btn-mp-path-mode'
-        }
-    };
     function pmDom(key) { return (PLAYER_MAP_DOM[activePlayerMapScope] || PLAYER_MAP_DOM.player)[key]; }
+
 
     function getPlayerActionPoints(report, view) {
         if(!report.actionMap) report.actionMap = {};
