@@ -2590,6 +2590,9 @@
     // también, no donde "quede mejor" más abajo en el archivo.
     let ctx, canvas;
     let heatCtx, heatCanvas;
+    let currentPlayerActionView = 'full';
+    let currentPlayerActionType = 'recepcion';
+    let playerActionCtx, playerActionCanvas;
     let activePlayerMapScope = 'player'; // 'player' (Perfil de Jugador) | 'matchplayer' (Informe dentro de un partido)
     const PLAYER_MAP_DOM = {
         player: {
@@ -2627,7 +2630,19 @@
             // Reajusta la pizarra táctica y demás canvases (mapa de calor, mapa
             // de acciones): al abrir/cerrar el teclado en iOS el layout puede
             // cambiar de tamaño sin disparar el "resize" clásico de window.
-            if (typeof resizeAllPitchCanvases === 'function') resizeAllPitchCanvases();
+            // Este bloque llega a tocar, en cascada, variables module-level que se
+            // declaran mucho más abajo en el archivo (pizarra, mapa de calor, mapa
+            // de acciones del jugador, y lo que se le vaya agregando a esa cascada
+            // en el futuro). Se ejecuta por primera vez apenas carga la página —
+            // ANTES de que exista sesión iniciada — así que un try/catch acá no es
+            // "tapar el error": es la frontera correcta entre "ajuste cosmético de
+            // layout" y "arranque de la app". Si algo de ese ajuste falla, no debe
+            // poder tirar abajo el resto del script (login incluido). Si se agregan
+            // más piezas a esa cascada más adelante, no hace falta declararlas todas
+            // más arriba en el archivo: alcanza con que sigan sin explotar el login.
+            if (typeof resizeAllPitchCanvases === 'function') {
+                try { resizeAllPitchCanvases(); } catch(err) { console.error('resizeAllPitchCanvases (carga inicial):', err); }
+            }
         }
 
         function scheduleViewportUpdate() {
@@ -11411,11 +11426,11 @@
         { key: 'heatmap',      label: 'Mapa de Calor',  icon: 'fa-fire',            color: '#f97316', isHeat: true }
     ];
 
-    let currentPlayerActionView = 'full';
-    let currentPlayerActionType = 'recepcion';
     let playerPathMode = false;
     let playerPathFirstPoint = null; // {xPct, yPct} en espera del segundo click del recorrido
-    let playerActionCtx, playerActionCanvas;
+    // (currentPlayerActionView, currentPlayerActionType, playerActionCtx y
+    // playerActionCanvas se declaran más arriba en el archivo, junto a canvas/
+    // heatCanvas, porque initPlayerActionMapCanvas() los necesita desde la carga inicial)
 
     // === CONTEXTO DEL MOTOR DE MAPAS (reutilizable entre el Perfil de Jugador y el ===
     // === Informe de Jugador dentro de un Análisis de Partido) ===
