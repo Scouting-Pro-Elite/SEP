@@ -22888,8 +22888,11 @@ window.SP_FIREBASE_CONFIG = {
 #sp-auth .sp-link{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.3rem 0;text-decoration:underline}
 #sp-auth .sp-msg{font-size:.85rem;margin-top:.8rem;display:none}
 #sp-auth .sp-msg.err{color:var(--danger)}#sp-auth .sp-msg.ok{color:var(--success)}
-#sp-pill{position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:1500;display:none;align-items:center;gap:.45rem;max-width:calc(100vw - 80px);padding:.3rem .65rem;border-radius:999px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;line-height:1.2}
-#sp-pill .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--text-muted)}
+#sp-pill{position:fixed;left:4px;bottom:calc(4px + env(safe-area-inset-bottom,0px));z-index:1500;display:none;align-items:center;gap:.4rem;padding:3px;border-radius:999px;color:var(--text-muted);font-size:.72rem;line-height:1.2;cursor:pointer;opacity:.6;pointer-events:none}
+#sp-pill .dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--text-muted)}
+#sp-pill .txt{display:none;padding:.25rem .6rem;border-radius:999px;background:var(--bg-panel);border:1px solid var(--border);max-width:min(80vw,420px);pointer-events:none}
+#sp-pill.show .txt{display:block}#sp-pill.show{opacity:1}
+#sp-pill.warn,#sp-pill.err,#sp-pill.sync{pointer-events:auto}#sp-pill.warn,#sp-pill.err{opacity:1}
 #sp-pill.ok .dot{background:var(--success)}#sp-pill.warn .dot{background:var(--warning)}#sp-pill.err .dot{background:var(--danger)}
 #sp-pill.sync .dot{background:var(--accent);animation:sppulse 1s infinite}
 @keyframes sppulse{50%{opacity:.3}}
@@ -22923,7 +22926,10 @@ function pill() {
     else if (st.syncing) { t = 'Sincronizando con la nube…'; c = 'sync'; }
     else if (st.pending) { t = 'Guardado en este dispositivo · ' + st.pending + ' cambios pendientes de nube'; c = 'warn'; }
     else { t = 'Todo sincronizado en la nube' + (st.conflicts ? ' · se conservó una versión alternativa por conflicto' : ''); c = 'ok'; }
-    el.style.display = 'flex'; el.className = c; el.innerHTML = '<span class="dot"></span><span>' + t + '</span>';
+    var keep = el.classList.contains('show') ? ' show' : '';
+    el.style.display = 'flex'; el.className = c + keep; el.title = t;
+    el.innerHTML = '<span class="dot"></span><span class="txt">' + t + '</span>';
+    if (!el._spBound) { el._spBound = true; el.addEventListener('click', function () { el.classList.add('show'); clearTimeout(el._spT); el._spT = setTimeout(function () { el.classList.remove('show'); }, 4000); }); }
 }
 
 /* ---------- IndexedDB propia de la cola (separada de StorageManager) ---------- */
