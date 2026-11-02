@@ -15,7 +15,7 @@
  * ---------------------------------------------------------------
  */
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const APP_SHELL_CACHE = `scoutpro-elite-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `scoutpro-elite-runtime-${CACHE_VERSION}`;
 
@@ -83,6 +83,12 @@ self.addEventListener('fetch', (event) => {
     // llega a interceptar; intentar cache.put() sobre ellas lanzaba
     // "Failed to execute 'put' on 'Cache': Request scheme ... is unsupported".
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+    // Firebase / APIs de Google (login y Firestore): JAMAS se cachean ni se interceptan.
+    // (el SDK de gstatic.com si se cachea, para poder abrir la app sin internet)
+    const h = url.hostname;
+    if ((h.endsWith('googleapis.com') && h !== 'fonts.googleapis.com') ||
+        h.endsWith('firebaseapp.com') || h.endsWith('firebaseio.com') || h.endsWith('google.com')) return;
 
     const isSameOrigin = url.origin === self.location.origin;
 
