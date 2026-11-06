@@ -15,7 +15,7 @@
  * ---------------------------------------------------------------
  */
 
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v11';
 const APP_SHELL_CACHE = `scoutpro-elite-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `scoutpro-elite-runtime-${CACHE_VERSION}`;
 
