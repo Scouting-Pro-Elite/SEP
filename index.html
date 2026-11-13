@@ -25120,7 +25120,11 @@ function scoutproEliteFlatten(json) {
     r.liga = g.comp; r.temporada = temp;
     speGeoRow(r, g, pl ? { nat: pp.nationality || pl.nationality || null, natCode: pp.nationality_code || pl.nationality_code || null } : null, learned, geoCat, own(compId, g.comp) ? compId[g.comp] : null);
     if (g.minutes != null) r.minutos = g.minutes; if (g.matches != null) r.partidos = g.matches;
-    var pos = pp.position_description || (pl && pl.position_description); if (pos) r.posicion = pos;
+    var pos = pp.position_description || (pl && pl.position_description);
+    /* PARCHE SPE v3b: si no hay descripción, se traduce position_ids (números de FotMob) a siglas. Tabla deducida de los jugadores que traen ambos datos. */
+    if (!pos && pp.position_ids != null) { var SPE_PID = {0:'Goalkeeper',1:'Defender',2:'Midfielder',3:'Attacker',11:'GK',31:'RB',32:'RB',33:'CB',34:'CB',35:'CB',36:'CB',37:'CB',38:'LB',51:'RWB',52:'RWB',62:'RWB',55:'CDM',57:'LWB',58:'LWB',59:'LWB',68:'LWB',63:'CDM',64:'CDM',65:'CDM',66:'CDM',67:'CDM',71:'RM',72:'RM',73:'CM',74:'CM',75:'CM',76:'CM',77:'CM',78:'LM',79:'LM',82:'RW',83:'RW',84:'CAM',85:'CAM',86:'CAM',94:'CAM',95:'CAM',96:'CAM',87:'LW',88:'LW',98:'LW',103:'RW',104:'ST',105:'ST',106:'ST',107:'LW',114:'ST',115:'ST',116:'ST'}, pc = [];
+      (Array.isArray(pp.position_ids) ? pp.position_ids : String(pp.position_ids).split(',')).forEach(function (n) { var c = SPE_PID[Number(n)]; if (c && pc.indexOf(c) < 0) pc.push(c); }); if (pc.length) pos = pc.join(','); }
+    if (pos) r.posicion = pos;
     if (typeof pp.age === 'number') r.edad = pp.age; if (pp.date_of_birth) r.fecha_nacimiento = pp.date_of_birth;
     if (typeof pp.height === 'number') r.altura = pp.height; if (typeof pp.transfer_value === 'number') r.valor_mercado = pp.transfer_value;
     for (var vk in g.vals) if (own(g.vals, vk)) r[vk] = g.vals[vk];
