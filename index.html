@@ -23709,6 +23709,22 @@ table.bd-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.8
 .bd-hist tr:hover td{background:rgba(14,165,233,.07)}
 .bd-hist tr.cur td{background:rgba(14,165,233,.16)}
 .bd-scroll{overflow-x:auto}
+.fv-seg{display:inline-flex;gap:0;margin:.3rem 0 .2rem;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.fv-seg button{background:var(--bg-app);color:var(--text-muted);border:0;padding:.4rem .8rem;font-size:.78rem;cursor:pointer;font-family:inherit}
+.fv-seg button.on{background:var(--accent);color:#fff;font-weight:600}
+.fv[data-v=p90] .fv-t{display:none}.fv[data-v=tot] .fv-p{display:none}
+table.fv-tbl{table-layout:fixed;width:100%;border-collapse:collapse;font-size:.84rem;margin-bottom:.3rem}
+.fv-tbl th{text-align:right;padding:.4rem .6rem;font-size:.66rem;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:600}
+.fv-tbl th:first-child,.fv-tbl td:first-child{text-align:left}
+.fv-tbl th:first-child{width:44%}
+.fv-tbl td{padding:.42rem .6rem;border-bottom:1px solid rgba(255,255,255,.06);text-align:right;font-variant-numeric:tabular-nums}
+.fv-tbl td:first-child{color:var(--text)}
+.fv-tbl td.calc{font-style:italic;color:var(--text-muted)}
+.fv-tbl tr.sub td{background:var(--bg-app);color:var(--accent);font-size:.7rem;font-weight:600;text-align:left}
+.fv-ks{display:block;font-size:.7rem;color:var(--text-muted);font-weight:400;margin-top:.1rem}
+.fv-kpi .bd-kv b{display:block}
+.fv-miss{margin:.8rem 0;font-size:.78rem;color:var(--text-muted)}.fv-miss summary{cursor:pointer}.fv-miss div{margin-top:.4rem;line-height:1.6}
+
 table.bd-cmp{width:100%;border-collapse:collapse;font-size:.82rem;min-width:520px}
 .bd-cmp th,.bd-cmp td{padding:.5rem .65rem;border-bottom:1px solid rgba(255,255,255,.06);text-align:center}
 .bd-cmp th:first-child,.bd-cmp td:first-child{text-align:left;color:var(--text-muted);position:sticky;left:0;background:var(--bg-panel);z-index:1;min-width:150px}
@@ -24558,6 +24574,110 @@ function statBlock(r) {
   });
   return html;
 }
+/* ===== SPE v5: ficha ordenada — columnas "Total temporada" y "Por 90 min" lado a lado, lo importante primero ===== */
+var FV_ALIAS = {   // nombre técnico (ya traducido por la app) -> nombre prolijo [, tipo forzado, grupo]
+ 'shotsontarget': ['Tiros al arco'], 'defensivo acciones': ['Contribuciones defensivas'],
+ 'regates succeeded': ['Regates exitosos'], 'ganados regate subtitle': ['Regates exitosos', 'pct'],
+ 'centros succeeeded': ['Centros precisos'], 'centros succeeded': ['Centros precisos'], 'centros succeeeded precision': ['Centros precisos', 'pct'], 'centros succeeded precision': ['Centros precisos', 'pct'],
+ 'pases previos a tiro': ['Pases clave'], 'ocasiones creadas': ['Ocasiones claras creadas'],
+ 'exitosos pases precision': ['Pases precisos', 'pct'], 'precision de pases': ['Pases precisos', 'pct'], 'precision de pases largos': ['Pases largos precisos', 'pct'],
+ 'aereos ganados': ['Duelos aéreos ganados', 'pct'], 'de cabeza tiros': ['Tiros de cabeza'], 'linea rompiendo pases': ['Pases que rompen líneas'],
+ 'poss ganados ataque 3rd team title': ['Posesiones ganadas en último tercio'], 'invicta valla team title': ['Vallas invictas del equipo', null, 'Equipo con él en cancha'],
+ 'goles recibidos while a pitch': ['Goles recibidos por el equipo', null, 'Equipo con él en cancha'], 'esperados goles en contra while a pitch': ['xG en contra del equipo', null, 'Equipo con él en cancha'],
+ 'goles subtitle': ['Goles (dato adicional de FotMob)', null, 'Otras métricas'],
+ 'xg': ['xG (goles esperados)'], 'xa': ['xA (asistencias esperadas)'], 'entradas': ['Entradas ganadas'], 'entradas succeeded': ['Entradas ganadas'], 'tarjetas amarillas': ['Tarjetas amarillas'], 'tarjetas rojas': ['Tarjetas rojas'],
+ 'duelos ganados': ['Duelos ganados'], 'ganados duelos': ['Duelos ganados', 'pct']
+};
+var FV_PRIO = {
+ 'General': ['titularidades', 'toques', 'perdidas de balon'],
+ 'Ataque': ['goles', 'asistencias', 'goles + asistencias', 'xg (goles esperados)', 'xg sin penales (npxg)', 'xgot (goles esperados a puerta)', 'tiros', 'tiros al arco', 'tiros de cabeza', 'toques en el area rival', 'ocasiones claras falladas', 'penales provocados'],
+ 'Creación': ['xa (asistencias esperadas)', 'xg + xa', 'pases clave', 'ocasiones claras creadas', 'regates exitosos', 'centros precisos', 'veces desposeido'],
+ 'Pases': ['pases precisos', 'pases largos precisos', 'pases largos totales', 'pases que rompen lineas'],
+ 'Defensa': ['contribuciones defensivas', 'entradas ganadas', 'intercepciones', 'despejes', 'bloqueos', 'recuperaciones', 'posesiones ganadas en ultimo tercio', 'duelos ganados', 'duelos aereos ganados', 'veces regateado'],
+ 'Disciplina': ['faltas cometidas', 'faltas recibidas', 'tarjetas amarillas', 'tarjetas rojas', 'penales cometidos'],
+ 'Arquero': ['atajadas', 'goles recibidos', 'vallas invictas', 'goles evitados', 'penales atajados']
+};
+var FV_GROUPS = ['General', 'Ataque', 'Creación', 'Pases', 'Defensa', 'Disciplina', 'Arquero', 'Equipo con él en cancha', 'Otras métricas'];
+var FV_TITLE = { 'General': 'Participación', 'Arquero': 'Arquero', 'Equipo con él en cancha': 'El equipo con él en cancha' };
+var FV_SKIP = { 'nota promedio': 1, 'partidos': 1, 'minutos': 1, 'minutos jugados (fuente)': 1, 'minutos jugados': 1 };
+var FV_NO90 = /valla|titularidad|ingresos|veces regateado|goles evitados|penales/;
+function fvCap(s) { s = String(s).trim(); if (/^x[GAgaN]/.test(s)) return s; return s.charAt(0).toUpperCase() + s.slice(1); }
+function fvInfo(m) {
+  var l = String(m.l), nk = m.k ? normKey(m.k) : '', kind;
+  var base = l.replace(/\s*\(total temporada\)\s*$/, '').replace(/\s+por 90\s*$/, '').replace(/\s*\((calculad[ao],\s*)?%\)\s*$/, '').replace(/^%\s*de\s+/i, '').replace(/\s*\(calculado\)\s*$/, '');
+  if (m.v !== undefined) kind = m.pct ? 'pct' : 'tot';
+  else if (/%/.test(l) || /(^| )(percent|pct|percentage)( |$)/.test(nk)) kind = 'pct';
+  else if (UNIT_P90[m.k] || RE_P90.test(nk) || /por 90\s*$/.test(l)) kind = 'p90';
+  else kind = 'tot';
+  var al = FV_ALIAS[norm(base)], grp = null;
+  if (al) { base = al[0]; if (al[1]) kind = al[1]; if (al[2]) grp = al[2]; }
+  return { b: fvCap(base), kind: kind, grp: grp };
+}
+function fvNum(v, kind) {
+  if (v === null || v === undefined) return '<span class="bd-nd">—</span>';
+  if (kind === 'pct') return (Math.round(v * 10) / 10) + '%';
+  if (kind === 'p90') return v.toFixed(2);
+  return Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100);
+}
+function statBlockOrdenado(r) {
+  var isGK = false; try { isGK = effPos(r).codes.indexOf('ARQ') >= 0; } catch (e) {}
+  var list = metricList([r]), rows = {}, order = [], mins = num(r.minutos);
+  function put(m, g, v) {
+    var inf = fvInfo(m), id = norm(inf.b), grp = inf.grp || g;
+    if (isGK && grp === 'Pases') grp = 'Arquero';
+    var row = rows[id];
+    if (row && row[inf.kind] !== null && v !== null && row[inf.kind] !== v) { id = id + '|' + (m.k || m.l); row = rows[id]; inf.b = m.l; }
+    if (!row) { row = rows[id] = { id: id, l: inf.b, g: grp, sub: m.sub || '', tot: null, p90: null, pct: null, part: false, calc: false, order: order.length }; order.push(id); }
+    else if (row.g === 'Otras métricas' && grp !== 'Otras métricas') row.g = grp;
+    if (v !== null) row[inf.kind] = v;
+    if (v !== null && r._part && m.k && r._part[m.k] != null) row.part = r._part[m.k];
+    if (!row.sub && m.sub) row.sub = m.sub;
+    if (isGK && row.g === 'Arquero' && !row.sub) row.sub = 'Distribución y juego con los pies';
+  }
+  list.forEach(function (m) { put(m, m.g || 'Otras métricas', m.v !== undefined ? m.v : num(r[m.k])); });
+  // derivadas reales (solo si hay pases intentados y precisos): igual que antes
+  ['pass', 'long'].forEach(function (pr) {
+    var ok = list.filter(function (m) { return m.pair === pr && m.role === 'ok' && num(r[m.k]) !== null; })[0], at = list.filter(function (m) { return m.pair === pr && m.role === 'att' && num(r[m.k]) !== null; })[0];
+    if (!ok || !at || num(r[at.k]) < num(r[ok.k])) return;
+    put({ k: '_d_' + pr + '_f', l: (pr === 'pass' ? 'Pases fallados' : 'Pases largos fallados') + ' (calculado)', g: 'Pases', v: num(r[at.k]) - num(r[ok.k]) }, 'Pases', num(r[at.k]) - num(r[ok.k]));
+    if (num(r[at.k]) > 0) put({ k: '_d_' + pr + '_p', l: (pr === 'pass' ? 'Pases precisos' : 'Pases largos precisos') + ' (%)', g: 'Pases', v: num(r[ok.k]) / num(r[at.k]) * 100, pct: 1 }, 'Pases', num(r[ok.k]) / num(r[at.k]) * 100);
+  });
+  [['goles + asistencias', 'goles', 'asist'], ['xg + xa', 'xG', 'xA']].forEach(function (d) {   // sumas exactas de datos que sí vienen
+    var x = rows[d[0]], p = num(r[d[1]]), q = num(r[d[2]]); if (x && x.tot === null && x.p90 === null && p !== null && q !== null) x.tot = Math.round((p + q) * 100) / 100;
+  });
+  var byId = rows, kpiRow = function (nm) { return byId[norm(nm)]; };
+  var arr = order.map(function (id) { var x = rows[id]; if (x.tot !== null && x.p90 === null && x.pct === null && mins > 0 && !FV_NO90.test(norm(x.l))) { x.p90 = x.tot * 90 / mins; x.calc = true; } return x; });
+  var missing = [], shown = arr.filter(function (x) {
+    if (FV_SKIP[norm(x.l)]) return false;
+    if (x.tot === null && x.p90 === null && x.pct === null) { if (x.g !== 'Otras métricas' && !(x.g === 'Arquero' && !isGK) && !(isGK && (x.g === 'Ataque' || x.g === 'Creación')) && !(x.g === 'Equipo con él en cancha')) missing.push(x.l); return false; }
+    return true;
+  });
+  // --- Resumen clave ---
+  var kp = [];
+  function kc(lbl, big, small) { kp.push('<div class="bd-kv big"><span>' + esc(lbl) + '</span><b>' + big + '</b>' + (small ? '<small class="fv-ks">' + small + '</small>' : '') + '</div>'); }
+  function kr(nm, lbl) { var x = kpiRow(nm); if (!x || (x.tot === null && x.p90 === null)) return; kc(lbl || x.l, fvNum(x.tot !== null ? x.tot : x.p90, x.tot !== null ? 'tot' : 'p90'), (x.p90 !== null && x.tot !== null ? fvNum(x.p90, 'p90') + ' por 90' : '') + (x.pct !== null ? (x.p90 !== null && x.tot !== null ? ' · ' : '') + fvNum(x.pct, 'pct') : '')); }
+  kc('Partidos', fvNum(num(r.partidos), 'tot'), ''); kc('Minutos', fvNum(mins, 'tot'), ''); if (num(r.nota) !== null) kc('Nota promedio', num(r.nota).toFixed(2), '');
+  if (isGK) { kr('Atajadas'); kr('Goles recibidos'); kr('Vallas invictas'); kr('Goles evitados'); }
+  else { kr('Goles'); kr('Asistencias'); kr('xG (goles esperados)'); kr('xA (asistencias esperadas)'); }
+  var h = '<div class="bd-grp"><i class="fa-solid fa-star"></i>Resumen clave</div><div class="bd-grid2 fv-kpi">' + kp.join('') + '</div>';
+  h += '<div class="fv" data-v="both"><div class="fv-seg" role="group" aria-label="Qué columnas ver"><button type="button" class="on" data-v="both" onclick="(function(b){var c=b.closest(\'.fv\');c.setAttribute(\'data-v\',b.getAttribute(\'data-v\'));[].forEach.call(c.querySelectorAll(\'.fv-seg button\'),function(x){x.classList.toggle(\'on\',x===b)})})(this)">Ambos</button><button type="button" data-v="p90" onclick="(function(b){var c=b.closest(\'.fv\');c.setAttribute(\'data-v\',b.getAttribute(\'data-v\'));[].forEach.call(c.querySelectorAll(\'.fv-seg button\'),function(x){x.classList.toggle(\'on\',x===b)})})(this)">Por 90 min</button><button type="button" data-v="tot" onclick="(function(b){var c=b.closest(\'.fv\');c.setAttribute(\'data-v\',b.getAttribute(\'data-v\'));[].forEach.call(c.querySelectorAll(\'.fv-seg button\'),function(x){x.classList.toggle(\'on\',x===b)})})(this)">Total temporada</button></div>';
+  (isGK ? ['Arquero'].concat(FV_GROUPS.filter(function (g) { return g !== 'Arquero'; })) : FV_GROUPS).forEach(function (g) {
+    var gr = shown.filter(function (x) { return x.g === g; }); if (!gr.length) return;
+    var pr = FV_PRIO[g] || [];
+    gr.sort(function (a, b) { var i = pr.indexOf(norm(a.l)), j = pr.indexOf(norm(b.l)); return (i < 0 ? 100 + a.order : i) - (j < 0 ? 100 + b.order : j); });
+    var hasPct = gr.some(function (x) { return x.pct !== null; }), body = '', lastSub = null;
+    if (g === 'Arquero') { var so = ['Rendimiento general', 'Atajadas', 'Rendimiento en el área', 'Distribución y juego con los pies']; gr.sort(function (a, b) { var x = so.indexOf(a.sub || 'Otras métricas de arquero'), y = so.indexOf(b.sub || 'Otras métricas de arquero'); return (x < 0 ? 9 : x) - (y < 0 ? 9 : y); }); }
+    gr.forEach(function (x) {
+      if (g === 'Arquero') { var sb = x.sub || 'Otras métricas de arquero'; if (sb !== lastSub) { body += '<tr class="sub"><td colspan="4">' + esc(sb) + '</td></tr>'; lastSub = sb; } }
+      var st = x.part ? ' <sup class="bd-star" title="Cobertura parcial: el dato está en registros que suman el ' + x.part + ' % de los minutos del período; en el resto el archivo no lo trae (no se asume cero).">*</sup>' : '';
+      body += '<tr><td>' + esc(x.l) + st + '</td><td class="fv-t">' + fvNum(x.tot, 'tot') + '</td><td class="fv-p' + (x.calc ? ' calc' : '') + '"' + (x.calc ? ' title="Calculado: total ÷ minutos × 90"' : '') + '>' + fvNum(x.p90, 'p90') + '</td>' + (hasPct ? '<td class="fv-c">' + fvNum(x.pct, 'pct') + '</td>' : '') + '</tr>';
+    });
+    h += '<div class="bd-grp"><i class="fa-solid fa-chart-simple"></i>' + esc(FV_TITLE[g] || g) + '</div><div class="bd-scroll"><table class="fv-tbl"><thead><tr><th>Métrica</th><th class="fv-t">Total temporada</th><th class="fv-p">Por 90 min</th>' + (hasPct ? '<th class="fv-c">%</th>' : '') + '</tr></thead><tbody>' + body.replace(/colspan="4"/g, 'colspan="' + (hasPct ? 4 : 3) + '"') + '</tbody></table></div>';
+  });
+  h += '</div>';
+  if (missing.length) h += '<details class="fv-miss"><summary>Métricas que el archivo no trae para este jugador (' + missing.length + ')</summary><div>' + missing.map(esc).join(' · ') + '</div></details>';
+  return h;
+}
 function periodRecs(id, val) {
   var arr = S.byId.get(id) || [];
   if (!val || val === 'last') { var y = lastYear(id); return arr.filter(function (r) { return seasonYear(r) === y; }); }
@@ -24607,8 +24727,8 @@ function fichaBodyHtml(id, val) {
     h += '<tr data-act="fp-t" data-v="' + esc('t:' + torneoId(x)) + '" class="' + (inSet.has(x) ? 'cur' : '') + '"><td>' + (inSet.has(x) ? '● ' : '') + esc(x.temporada) + '</td><td>' + esc(x.liga) + '</td><td>' + fmt(x.club) + '</td><td>' + fmt(num(x.partidos)) + '</td><td>' + fmt(num(x.minutos)) + '</td><td>' + fmt(num(x.nota), 2) + '</td><td>' + fmt(num(x.goles)) + '</td><td>' + fmt(num(x.asist)) + '</td></tr>';
   });
   h += '</tbody></table></div>';
-  h += '<div class="bd-grp"><i class="fa-solid fa-futbol"></i>Estadísticas consolidadas</div><div class="bd-sub" style="margin:-.2rem 0 .4rem">Totales sumados; métricas por 90 recalculadas con los minutos; «Sin datos» = el archivo no trae el valor (no se asume cero); * = cobertura parcial.</div>';
-  h += val.indexOf('c:') === 0 ? fichaCompareHtml(recs, ag) : statBlock(ag) + extraTextHtml(ag);
+  h += '<div class="bd-grp"><i class="fa-solid fa-futbol"></i>Estadísticas consolidadas</div><div class="bd-sub" style="margin:-.2rem 0 .4rem">Dos columnas: <b>Total temporada</b> y <b>Por 90 min</b> (las que no vienen por 90 en el archivo se calculan con los minutos y se muestran en cursiva). «—» = el archivo no trae el valor (no se asume cero); * = cobertura parcial.</div>';
+  h += val.indexOf('c:') === 0 ? fichaCompareHtml(recs, ag) : (function () { try { return statBlockOrdenado(ag); } catch (e) { try { console.error(e); } catch (x) {} return statBlock(ag); } })() + extraTextHtml(ag);
   return h;
 }
 function fichaPeriod(val) {
