@@ -25921,6 +25921,28 @@ function computePlan(imp) {
       } else map.set(it.rec.k, { rec: it.rec, first: f.name + ' fila ' + it.rn, src: f.name });
     });
   });
+  /* PARCHE SPE v4: los registros del extractor nuevo (fuente 'fotmob_v2') se unen al registro YA existente del mismo jugador y año aunque la clave k o el nombre de la
+     temporada sean distintos (ej. «2026 Apertura» vs «2026»). Solo se une si hay UN candidato claro (misma liga; o, si hay varios, el que tiene los mismos minutos;
+     o único del año con el mismo club). Si hay duda, no se une y queda como registro nuevo (nunca se pisa un registro por adivinar). */
+  (function () {
+    var ren = [];
+    map.forEach(function (p, k) {
+      var rc = p.rec; if (rc.fuente !== 'fotmob_v2' || S.byK.has(k)) return;
+      var ym = /\d{4}/.exec(String(rc.temporada == null ? '' : rc.temporada)); if (!ym) return;
+      var cands = (S.byId.get(String(rc.id)) || []).filter(function (x) { var y = /\d{4}/.exec(String(x.temporada == null ? '' : x.temporada)); return y && y[0] === ym[0]; });
+      if (!cands.length) return;
+      var byLiga = cands.filter(function (x) { return compact(x.liga) === compact(rc.liga); }), pick = null;
+      if (byLiga.length === 1) pick = byLiga[0];
+      else if (byLiga.length > 1) { var eq = byLiga.filter(function (x) { return rc.minutos != null && Number(x.minutos) === Number(rc.minutos); }); if (eq.length === 1) pick = eq[0]; }
+      else if (cands.length === 1 && rc.club && compact(cands[0].club) === compact(rc.club)) pick = cands[0];
+      if (pick) ren.push([k, pick]);
+    });
+    ren.forEach(function (x) {
+      var p = map.get(x[0]), pick = x[1]; map.delete(x[0]);
+      p.rec = Object.assign({}, p.rec, { k: pick.k, liga: pick.liga, temporada: pick.temporada });
+      var q = map.get(pick.k); if (q) { q.rec = Object.assign({}, q.rec, p.rec); } else map.set(pick.k, p);
+    });
+  })();
   // posibles duplicados: misma persona/temporada/competición con otra clave o con otro ID (la clave k o el ID pueden venir escritos distinto)
   var exA = new Map(), exB = new Map(), inA = new Map(), inB = new Map();
   function addTo(m, key, val, pais) { var s = m.get(key); if (!s) { s = []; m.set(key, s); } s.push({ v: val, p: compact(pais) }); }
