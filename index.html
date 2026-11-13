@@ -24980,30 +24980,37 @@ function speSsSlim(s) {
   var m = /^(.*?)\s*-\s*(Apertura|Clausura)\s*$/i.exec(sr), seas = m ? m[1].trim() : sr, stage = m ? (m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase()) : '';
   var vals = Object.create(null), st = s.stats_total && typeof s.stats_total === 'object' ? s.stats_total : {}, k, n = 0;
   for (k in st) if (Object.prototype.hasOwnProperty.call(st, k) && typeof st[k] === 'number' && isFinite(st[k])) { vals['m_' + k.replace(/^matchstats\.headers\./, '').replace(/[^A-Za-z0-9_]+/g, '_')] = st[k]; n++; }
-  /* PARCHE SPE v1: columnas estándar de la app a partir de season_statistics.
-     Antes solo se guardaban las columnas con prefijo m_ (ej. m_goals) y las columnas «Goles», «Asistencias», «xG», «Goles por 90», etc. quedaban vacías
-     para los jugadores que no están en los rankings (topstats). Ahora se completan las columnas estándar con los MISMOS valores de season_statistics
-     (totales) y se calculan los «por 90» desde minutos jugados. Solo se agregan claves; las m_ originales se conservan. Si el registro ya trae la
-     columna estándar desde topstats, speMergeSS no la pisa (fill() solo completa lo que falta). */
-  var minT = typeof s.minutes_total === 'number' && isFinite(s.minutes_total) ? s.minutes_total : null;
-  var STD = { goals: 'goles', assists: 'asist', expected_goals: 'xG', expected_assists: 'xA', total_shots: 'tiros', ShotsOnTarget: 'tiros_arco' };
-  var sk2;
-  for (sk2 in STD) if (Object.prototype.hasOwnProperty.call(STD, sk2) && typeof st[sk2] === 'number' && isFinite(st[sk2])) { vals[STD[sk2]] = st[sk2]; n++; }
+  /* PARCHE SPE v2: columnas estándar de la app a partir de season_statistics.
+     La app espera dos tipos de columna: TOTALES de temporada (goles, asist, xG, xA, f_big_chance_missed, f_expected_goalsontarget, f__goals_and_goal_assist)
+     y valores YA POR 90 minutos (tiros, tiros_arco, f_accurate_pass, f_accurate_long_balls, f_ball_recovery, f_interception, f_won_contest, f_fouls,
+     f_effective_clearance, f_goals_per_90, f_expected_goals_per_90, f_expected_assists_per_90). Los de topstats vienen de los rankings; los jugadores que no
+     están en rankings quedaban vacíos y solo tenían las columnas m_ (totales). Acá se completan con los MISMOS datos de season_statistics: totales tal cual
+     y por 90 = total * 90 / minutos. Además se crea una columna f_<estadística>_per_90 para el resto de las estadísticas numéricas (la app la traduce sola).
+     Solo se agregan claves; las m_ originales se conservan. Lo que ya viene de topstats no se pisa (speMergeSS). Las claves calculadas se marcan en
+     «derived» para que speMergeSS no las cuente como conflicto contra topstats (redondeos distintos). */
+  var minT = typeof s.minutes_total === 'number' && isFinite(s.minutes_total) ? s.minutes_total : null, derived = Object.create(null), dk;
+  var TOT = { goals: 'goles', assists: 'asist', expected_goals: 'xG', expected_assists: 'xA', big_chance_missed_title: 'f_big_chance_missed', expected_goals_on_target_variant: 'f_expected_goalsontarget' };
+  var P90K = { total_shots: 'tiros', ShotsOnTarget: 'tiros_arco', long_balls_accurate: 'f_accurate_long_balls', accurate_passes: 'f_accurate_pass', recoveries: 'f_ball_recovery',
+    interceptions: 'f_interception', dribbles_succeeded: 'f_won_contest', fouls: 'f_fouls', clearances: 'f_effective_clearance',
+    goals: 'f_goals_per_90', expected_goals: 'f_expected_goals_per_90', expected_assists: 'f_expected_assists_per_90' };
+  for (dk in TOT) if (Object.prototype.hasOwnProperty.call(TOT, dk) && typeof st[dk] === 'number' && isFinite(st[dk])) { vals[TOT[dk]] = st[dk]; derived[TOT[dk]] = 1; n++; }
   var av = s.stats_avg_per_appearance && typeof s.stats_avg_per_appearance === 'object' ? s.stats_avg_per_appearance : null;
-  if (av && typeof av.rating_title === 'number' && isFinite(av.rating_title) && av.rating_title > 0) { vals.nota = av.rating_title; n++; }
-  if (typeof st.goals === 'number' && typeof st.assists === 'number') { vals.f__goals_and_goal_assist = st.goals + st.assists; n++; }
+  if (av && typeof av.rating_title === 'number' && isFinite(av.rating_title) && av.rating_title > 0) { vals.nota = av.rating_title; derived.nota = 1; n++; }
+  if (typeof st.goals === 'number' && typeof st.assists === 'number') { vals.f__goals_and_goal_assist = st.goals + st.assists; derived.f__goals_and_goal_assist = 1; n++; }
   if (minT !== null && minT > 0) {
-    var P90 = [['goals', 'f_goals_per_90'], ['expected_goals', 'f_expected_goals_per_90'], ['expected_assists', 'f_expected_assists_per_90']], pi;
-    for (pi = 0; pi < P90.length; pi++) if (typeof st[P90[pi][0]] === 'number' && isFinite(st[P90[pi][0]])) { vals[P90[pi][1]] = Math.round(st[P90[pi][0]] * 90 / minT * 1e4) / 1e4; n++; }
-    if (typeof st.expected_goals === 'number' && typeof st.expected_assists === 'number') { vals.f__expected_goals_and_expected_assists_per_90 = Math.round((st.expected_goals + st.expected_assists) * 90 / minT * 1e4) / 1e4; n++; }
+    for (dk in st) if (Object.prototype.hasOwnProperty.call(st, dk) && typeof st[dk] === 'number' && isFinite(st[dk]) && dk !== 'rating_title' && dk !== 'minutes_played') {
+      var pk = Object.prototype.hasOwnProperty.call(P90K, dk) ? P90K[dk] : 'f_' + dk.replace(/^matchstats\.headers\./, '').replace(/[^A-Za-z0-9_]+/g, '_') + '_per_90';
+      vals[pk] = Math.round(st[dk] * 90 / minT * 1e4) / 1e4; derived[pk] = 1; n++;
+    }
+    if (typeof st.expected_goals === 'number' && typeof st.expected_assists === 'number') { vals.f__expected_goals_and_expected_assists_per_90 = Math.round((st.expected_goals + st.expected_assists) * 90 / minT * 1e4) / 1e4; derived.f__expected_goals_and_expected_assists_per_90 = 1; n++; }
   }
   return { pid: String(s.player_id), comp: comp, cid: s.competition_id != null ? String(s.competition_id) : '', country: s.country_code != null ? String(s.country_code).trim() : '', seas: seas, stage: stage,
-    team: s.team_name ? String(s.team_name) : '', minutes: typeof s.minutes_total === 'number' && isFinite(s.minutes_total) ? s.minutes_total : null, matches: typeof s.appearances === 'number' && isFinite(s.appearances) ? s.appearances : null, vals: vals, n: n };
+    team: s.team_name ? String(s.team_name) : '', minutes: typeof s.minutes_total === 'number' && isFinite(s.minutes_total) ? s.minutes_total : null, matches: typeof s.appearances === 'number' && isFinite(s.appearances) ? s.appearances : null, vals: vals, n: n, derived: derived };
 }
 function speMergeSS(map, list, compMeta) {
   var conflicts = 0, i, s, gk, g, key, v;
   function fill(t, s) {
-    for (key in s.vals) if (Object.prototype.hasOwnProperty.call(s.vals, key)) { if (Object.prototype.hasOwnProperty.call(t.vals, key)) { if (t.vals[key] !== s.vals[key]) conflicts++; } else { t.vals[key] = s.vals[key]; t.n++; } }
+    for (key in s.vals) if (Object.prototype.hasOwnProperty.call(s.vals, key)) { if (Object.prototype.hasOwnProperty.call(t.vals, key)) { if (t.vals[key] !== s.vals[key] && !(s.derived && s.derived[key])) conflicts++; } else { t.vals[key] = s.vals[key]; t.n++; } }
     if (t.minutes == null) t.minutes = s.minutes; if (t.matches == null) t.matches = s.matches; if (t.team == null || t.team === '') t.team = s.team || t.team;
     t.fS = true; if (!t.cid) t.cid = s.cid;
   }
