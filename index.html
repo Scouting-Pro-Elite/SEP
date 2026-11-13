@@ -24989,9 +24989,13 @@ function speSsSlim(s) {
      Solo se agregan claves; las m_ originales se conservan. Lo que ya viene de topstats no se pisa (speMergeSS). Las claves calculadas se marcan en
      «derived» para que speMergeSS no las cuente como conflicto contra topstats (redondeos distintos). */
   var minT = typeof s.minutes_total === 'number' && isFinite(s.minutes_total) ? s.minutes_total : null, derived = Object.create(null), dk;
-  var TOT = { goals: 'goles', assists: 'asist', expected_goals: 'xG', expected_assists: 'xA', big_chance_missed_title: 'f_big_chance_missed', expected_goals_on_target_variant: 'f_expected_goalsontarget' };
+  var TOT = { goals: 'goles', assists: 'asist', expected_goals: 'xG', expected_assists: 'xA', big_chance_missed_title: 'f_big_chance_missed', expected_goals_on_target_variant: 'f_expected_goalsontarget',
+    /* PARCHE SPE v3: equivalencias medidas con comparar_estadisticas.py (coincidencia contra los rankings): chances_created→total_att_assist 89%, big_chance_created_team_title→big_chance_created 96%, conceded_penalties 99%, penalties_won 99%, saved_penalties 99%. */
+    chances_created: 'f_total_att_assist', big_chance_created_team_title: 'ocasiones_creadas', conceded_penalties: 'f_penalty_conceded', penalties_won: 'f_penalty_won', saved_penalties: 'f_penalty_save' };
   var P90K = { total_shots: 'tiros', ShotsOnTarget: 'tiros_arco', long_balls_accurate: 'f_accurate_long_balls', accurate_passes: 'f_accurate_pass', recoveries: 'f_ball_recovery',
     interceptions: 'f_interception', dribbles_succeeded: 'f_won_contest', fouls: 'f_fouls', clearances: 'f_effective_clearance',
+    /* PARCHE SPE v3 (por 90): tackles 80%, shot_blocks 89%, goals_conceded 84%; aproximados (77-79%): defensive_actions, saves, keeper_sweeper. */
+    'matchstats.headers.tackles': 'f_total_tackle', shot_blocks: 'f_outfielder_block', goals_conceded: 'f_goals_conceded', defensive_actions: 'f_defensive_contributions', saves: 'f_saves', keeper_sweeper: 'f_total_keeper_sweeper',
     goals: 'f_goals_per_90', expected_goals: 'f_expected_goals_per_90', expected_assists: 'f_expected_assists_per_90' };
   for (dk in TOT) if (Object.prototype.hasOwnProperty.call(TOT, dk) && typeof st[dk] === 'number' && isFinite(st[dk])) { vals[TOT[dk]] = st[dk]; derived[TOT[dk]] = 1; n++; }
   var av = s.stats_avg_per_appearance && typeof s.stats_avg_per_appearance === 'object' ? s.stats_avg_per_appearance : null;
