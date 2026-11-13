@@ -1780,6 +1780,7 @@ body.sp-board-mode #view-team-editor.active { height: 100%; }
             <span id="sidebar-user-name" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Usuario</span>
             <i class="fa-solid fa-right-from-bracket" style="cursor:pointer; color:var(--text-muted);" onclick="logoutProfile()" title="Cambiar de usuario"></i>
         </div>
+        <button class="btn" id="sp-del-acc" style="width: 100%; margin-bottom: 0.5rem; color: var(--danger); display: none;" onclick="spEliminarCuenta()"><i class="fa-solid fa-user-xmark"></i> Eliminar mi cuenta</button>
         <button class="btn" style="width: 100%; margin-bottom: 0.5rem;" onclick="exportDB()"><i class="fa-solid fa-download"></i> Exportar DB (JSON)</button>
         <input type="file" id="import-db" style="display: none;" accept=".json" onchange="importDB(event)">
         <button class="btn" style="width: 100%;" onclick="document.getElementById('import-db').click()"><i class="fa-solid fa-upload"></i> Importar DB</button>
@@ -23315,6 +23316,7 @@ var st = { online: navigator.onLine, syncing: false, error: null, verified: true
 
 /* ---------- Indicador de estado ---------- */
 function pill() {
+    var db = $('sp-del-acc'); if (db) db.style.display = user ? '' : 'none';
     var el = $('sp-pill'); if (!el) return;
     if (!user && !entered) { el.style.display = 'none'; return; }
     var t, c;
@@ -23634,6 +23636,36 @@ async function boot() {
     firebase.initializeApp(CFG); fbAuth = firebase.auth(); fbDb = firebase.firestore();
     fbAuth.onAuthStateChanged(onUser);
 }
+/* ---------- Eliminar mi cuenta (SPE v5) ---------- */
+async function deleteAccount() {
+    if (!user || !fbAuth || !fbDb) { alert('No hay una cuenta en la nube abierta en este momento. Ingresá con tu cuenta (correo o Google) y probá de nuevo.'); return; }
+    var u = user, who = u.email || u.displayName || 'esta cuenta';
+    if (!confirm('¿ELIMINAR la cuenta ' + who + '?\n\nSe borran la cuenta y todo lo que guardó en la nube (informes, jugadores y equipos). NO se puede deshacer.\n\nLo guardado en ESTE dispositivo no se borra.')) return;
+    if (prompt('Para confirmar, escribí ELIMINAR (en mayúsculas):') !== 'ELIMINAR') { alert('Cancelado. No se borró nada.'); return; }
+    try {   // por seguridad Firebase pide confirmar la identidad justo antes de borrar
+        var prov = ((u.providerData && u.providerData[0]) || {}).providerId;
+        if (prov === 'password') {
+            var pw = prompt('Escribí tu contraseña para confirmar:'); if (!pw) return;
+            await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, pw));
+        } else { await u.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    } catch (e) { alert('No se pudo confirmar tu identidad: ' + authErr(e)); return; }
+    unsubs.forEach(function (x) { try { x(); } catch (e) {} }); unsubs = [];
+    user = null; queue = {};   // frena la sincronización mientras se borra
+    var failed = false;
+    try {
+        var cols = COLS.concat(['conflicts']);
+        for (var i = 0; i < cols.length; i++) {
+            var snap = await fbDb.collection('users').doc(u.uid).collection(cols[i]).get(), docs = snap.docs;
+            for (var j = 0; j < docs.length; j += 400) { var b = fbDb.batch(); docs.slice(j, j + 400).forEach(function (d) { b.delete(d.ref); }); await b.commit(); }
+        }
+        try { await fbDb.collection('users').doc(u.uid).delete(); } catch (e) {}
+    } catch (e) { failed = true; console.error('SP cloud: borrado de datos', e); }
+    if (failed && !confirm('No se pudieron borrar todos los datos de la nube (puede ser un tema de permisos). ¿Eliminar igual la cuenta?')) { user = u; pill(); return; }
+    try { await u.delete(); }
+    catch (e) { user = u; pill(); alert('No se pudo eliminar la cuenta: ' + authErr(e)); return; }
+    alert('Tu cuenta fue eliminada.'); location.reload();
+}
+window.spEliminarCuenta = function () { deleteAccount().catch(function (e) { alert('Error: ' + ((e && e.message) || e)); }); };
 window.SPCloud = { status: function () { return JSON.parse(JSON.stringify(st)); }, queue: function () { return Object.keys(queue); }, scan: scan, pump: pump };
 boot();
 })();
