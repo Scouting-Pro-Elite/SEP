@@ -24399,13 +24399,28 @@ function geoCatalog() {
 }
 function fillPaisSelect(rows) {
   var el = $('bd-f-pais'), cur = el.value, by = { pais: {}, region: {}, pendiente: {} };
-  rows.forEach(function (r) { if (r.pais) (by[r.pais_tipo === 'region' ? 'region' : r.pais_tipo === 'pendiente' ? 'pendiente' : 'pais'])[r.pais] = 1; });
+  var ncomp = {};
+  rows.forEach(function (r) { if (r.pais) { (by[r.pais_tipo === 'region' ? 'region' : r.pais_tipo === 'pendiente' ? 'pendiente' : 'pais'])[r.pais] = 1; if (r.liga) (ncomp[r.pais] = ncomp[r.pais] || {})[r.liga] = 1; } });
   var groups = [['pais', 'Países'], ['region', 'Competiciones internacionales (regiones)'], ['pendiente', 'Códigos pendientes de identificar']].map(function (g) { return [g[1], Object.keys(by[g[0]]).sort(cmpStr)]; }).filter(function (g) { return g[1].length; });
   var h = '<option value="">Todos los países</option>', ok = false;
   groups.forEach(function (g) {
     if (groups.length > 1) h += '<optgroup label="' + esc(g[0]) + '">';
-    g[1].forEach(function (v) { if (v === cur) ok = true; h += '<option value="' + esc(v) + '">' + esc(v) + '</option>'; });
+    g[1].forEach(function (v) { if (v === cur) ok = true; var nc = ncomp[v] ? Object.keys(ncomp[v]).length : 0; h += '<option value="' + esc(v) + '">' + esc(v) + (nc ? ' (' + nc + ')' : '') + '</option>'; });
     if (groups.length > 1) h += '</optgroup>';
+  });
+  el.innerHTML = h; el.value = ok ? cur : '';
+}
+/* Competiciones: si no hay país elegido, se agrupan POR PAÍS (en vez de una lista larga mezclada); si hay país, solo las suyas. */
+function fillLigaSelect(recs) {
+  var el = $('bd-f-liga'), cur = el.value, by = {}, ok = false;
+  recs.forEach(function (r) { if (!r.liga) return; var c = r.pais || 'Sin país'; (by[c] = by[c] || {})[r.liga] = 1; });
+  var cs = Object.keys(by).sort(function (a, b) { return a === 'Sin país' ? 1 : b === 'Sin país' ? -1 : cmpStr(a, b); });
+  var h = '<option value="">Todas las competiciones</option>';
+  cs.forEach(function (c) {
+    var ls = Object.keys(by[c]).sort(cmpStr);
+    if (cs.length > 1) h += '<optgroup label="' + esc(c) + '">';
+    ls.forEach(function (n) { if (n === cur) ok = true; h += '<option value="' + esc(n) + '">' + esc(n) + '</option>'; });
+    if (cs.length > 1) h += '</optgroup>';
   });
   el.innerHTML = h; el.value = ok ? cur : '';
 }
@@ -24414,7 +24429,7 @@ function buildOptions() {
   fillPaisSelect(rows);
   var pais = $('bd-f-pais').value;
   var r1 = pais ? rows.filter(function (r) { return r.pais === pais; }) : rows;
-  fillSelect('bd-f-liga', 'Todas las competiciones', uniq(r1, function (r) { return r.liga; }).sort(cmpStr));
+  fillLigaSelect(r1);
   var liga = $('bd-f-liga').value;
   var r2 = liga ? r1.filter(function (r) { return r.liga === liga; }) : r1;
   var temp = fillPeriodSelect(r2);
